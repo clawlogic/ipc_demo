@@ -1,0 +1,29 @@
+version: 2
+
+models:
+  - name: dim_customers
+    description: "Customer dimension with aggregated order metrics"
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_service_orders
+    description: "Service orders fact table enriched with customer data"
+    columns:
+      - name: order_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+  - name: fct_billing_summary
+    description: "Billing summary aggregated per customer"
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null

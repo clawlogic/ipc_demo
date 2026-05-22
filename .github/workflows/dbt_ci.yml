@@ -1,0 +1,59 @@
+name: dbt CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  dbt-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dbt-fabric
+        run: pip install dbt-fabric
+
+      - name: Create profiles.yml
+        run: |
+          mkdir -p ~/.dbt
+          cat <<EOF > ~/.dbt/profiles.yml
+          ipc_fabric_demo:
+            target: ci
+            outputs:
+              ci:
+                type: fabric
+                driver: "ODBC Driver 18 for SQL Server"
+                server: ${{ secrets.FABRIC_SERVER }}
+                port: 1433
+                database: ${{ secrets.FABRIC_DATABASE }}
+                schema: dbo
+                threads: 4
+                authentication: ServicePrincipal
+                tenant_id: ${{ secrets.AZURE_TENANT_ID }}
+                client_id: ${{ secrets.AZURE_CLIENT_ID }}
+                client_secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          EOF
+
+      - name: dbt deps
+        run: dbt deps
+        working-directory: .
+
+      - name: dbt seed
+        run: dbt seed
+        working-directory: .
+
+      - name: dbt build
+        run: dbt build
+        working-directory: .
+
+      - name: dbt test
+        run: dbt test
+        working-directory: .

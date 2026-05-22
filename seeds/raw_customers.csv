@@ -1,0 +1,11 @@
+customer_id,customer_name,region,customer_type,created_date
+1,Boise Municipal,Southern,Commercial,2020-03-15
+2,Ada County Schools,Southern,Government,2019-07-22
+3,Mountain Home AFB,Southern,Government,2018-01-10
+4,Micron Technology,Southern,Industrial,2017-05-30
+5,St. Lukes Health,Southern,Commercial,2020-11-01
+6,Idaho Timber Corp,Northern,Industrial,2019-04-18
+7,City of Nampa,Southern,Government,2021-02-28
+8,Simplot Company,Southern,Industrial,2016-09-12
+9,Treasure Valley YMCA,Southern,Commercial,2022-01-15
+10,Clearwater Paper,Northern,Industrial,2018-08-20

@@ -1,0 +1,32 @@
+version: 2
+
+models:
+  - name: stg_customers
+    description: "Cleaned customer data from source system"
+    columns:
+      - name: customer_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+
+  - name: stg_service_orders
+    description: "Cleaned service order data"
+    columns:
+      - name: order_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: customer_id
+        tests:
+          - not_null
+
+  - name: stg_billing
+    description: "Cleaned billing data"
+    columns:
+      - name: billing_id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
