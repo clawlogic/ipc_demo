@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: bill_line_item
+    description: "EDW Foundation billing line items - SCD Type 1 incremental load with hash-based change detection"
+    columns:
+      - name: Invoice_DW_ID
+        description: "Part of composite key"
+        tests:
+          - not_null
+      - name: Bill_Seq
+        description: "Part of composite key"
+        tests:
+          - not_null
+      - name: Bill_Line_Item_Seq
+        description: "Part of composite key"
+        tests:
+          - not_null
+      - name: Bill_Line_Item_From_Dt
+        description: "Part of composite key"
+        tests:
+          - not_null

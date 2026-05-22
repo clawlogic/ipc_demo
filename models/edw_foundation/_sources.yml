@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: prestage
+    description: "Raw prestage tables loaded by upstream ETL"
+    schema: Prestage
+    tables:
+      - name: Bill_Line_Item
+        description: "Raw billing line items from source system"
