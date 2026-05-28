@@ -1,0 +1,118 @@
+# Azure Pipeline: Trigger Fabric Deployment Pipeline
+# This pipeline triggers promotion between Fabric workspaces after approval
+# Works with Azure DevOps (IPC's current platform)
+
+trigger:
+  branches:
+    include:
+      - develop  # Triggers on merge to develop
+
+pr: none  # Don't run on PRs (separate validation pipeline for that)
+
+pool:
+  name: DataServices  # IPC's self-hosted agent pool
+
+variables:
+  - group: Fabric-Variables  # Contains: FABRIC_PIPELINE_ID, DEV_STAGE_ID, TEST_STAGE_ID, PROD_STAGE_ID
+  - name: fabricApiUrl
+    value: 'https://api.fabric.microsoft.com/v1'
+
+stages:
+  - stage: DeployToTest
+    displayName: 'Deploy Dev → Test'
+    jobs:
+      - deployment: FabricDeploy
+        displayName: 'Trigger Fabric Deployment Pipeline'
+        environment: 'Test'  # ADO environment with approval gate
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: 'Get Fabric API Token'
+                  inputs:
+                    azureSubscription: 'SVP-IPC-DEV-Dataservices'
+                    scriptType: 'pscore'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      $token = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
+                      Write-Host "##vso[task.setvariable variable=fabricToken;issecret=true]$token"
+
+                - task: PowerShell@2
+                  displayName: 'Trigger Dev → Test Deployment'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      $headers = @{
+                        Authorization = "Bearer $(fabricToken)"
+                        "Content-Type" = "application/json"
+                      }
+                      $body = @{
+                        sourceStageId = "$(DEV_STAGE_ID)"
+                        targetStageId = "$(TEST_STAGE_ID)"
+                        note = "Automated deployment from Azure Pipelines - Build $(Build.BuildNumber)"
+                      } | ConvertTo-Json
+
+                      $response = Invoke-RestMethod `
+                        -Uri "$(fabricApiUrl)/deploymentPipelines/$(FABRIC_PIPELINE_ID)/deploy" `
+                        -Headers $headers `
+                        -Method Post `
+                        -Body $body
+
+                      Write-Host "Deployment triggered successfully"
+
+                - task: PowerShell@2
+                  displayName: 'Create Shortcuts (post-deployment)'
+                  inputs:
+                    targetType: 'filePath'
+                    filePath: 'azure-pipelines/scripts/create-shortcuts.ps1'
+                    arguments: >
+                      -WorkspaceId "$(TEST_WORKSPACE_ID)"
+                      -LakehouseId "$(TEST_LAKEHOUSE_BRONZE_ID)"
+                      -TargetWorkspaceId "$(TEST_WORKSPACE_ID)"
+                      -TargetLakehouseId "$(TEST_LAKEHOUSE_SILVER_ID)"
+
+  - stage: DeployToProd
+    displayName: 'Deploy Test → Prod'
+    dependsOn: DeployToTest
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: FabricDeployProd
+        displayName: 'Trigger Fabric Deployment Pipeline (Prod)'
+        environment: 'Production'  # ADO environment with approval gate
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  displayName: 'Get Fabric API Token'
+                  inputs:
+                    azureSubscription: 'SVP-IPC-PRD-Dataservices'
+                    scriptType: 'pscore'
+                    scriptLocation: 'inlineScript'
+                    inlineScript: |
+                      $token = az account get-access-token --resource "https://api.fabric.microsoft.com" --query accessToken -o tsv
+                      Write-Host "##vso[task.setvariable variable=fabricToken;issecret=true]$token"
+
+                - task: PowerShell@2
+                  displayName: 'Trigger Test → Prod Deployment'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      $headers = @{
+                        Authorization = "Bearer $(fabricToken)"
+                        "Content-Type" = "application/json"
+                      }
+                      $body = @{
+                        sourceStageId = "$(TEST_STAGE_ID)"
+                        targetStageId = "$(PROD_STAGE_ID)"
+                        note = "Production deployment from Azure Pipelines - Build $(Build.BuildNumber)"
+                      } | ConvertTo-Json
+
+                      $response = Invoke-RestMethod `
+                        -Uri "$(fabricApiUrl)/deploymentPipelines/$(FABRIC_PIPELINE_ID)/deploy" `
+                        -Headers $headers `
+                        -Method Post `
+                        -Body $body
+
+                      Write-Host "Production deployment triggered successfully"
